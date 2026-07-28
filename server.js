@@ -29,11 +29,15 @@ app.post('/order', async (req, res) => {
       return res.status(400).json({ error: 'Invalid payload: chat_id and text are required.' });
     }
 
+    const authToken = botToken.trim().startsWith('Bearer ')
+      ? botToken.trim()
+      : `Bearer ${botToken.trim()}`;
+
     const response = await fetch('https://platform-api2.max.ru/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: botToken
+        Authorization: authToken
       },
       body: JSON.stringify({ chat_id: targetChatId, text })
     });

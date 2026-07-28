@@ -1,0 +1,23 @@
+{
+  "name": "stolovka-max",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "serve": "node server.js",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "@maxhub/max-ui": "^0.2.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.2.0",
+    "dotenv": "^16.3.1",
+    "vite": "^5.4.0"
+  }
+}

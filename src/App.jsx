@@ -262,13 +262,8 @@ export default function App() {
     );
   }, [cart]);
 
-  const openCart = () => {
-  setCheckoutOpened(false);
-  setCartOpened(true);
-  };
-  const closeCart = () => {
-  setCartOpened(false);
-};
+  const openCart = () => setCartOpened(true);
+  const closeCart = () => setCartOpened(false);
   const openCheckout = () => {
     if (cart.length === 0) {
       setStatusMessage('Добавьте блюда в корзину, чтобы оформить заказ.');
@@ -277,78 +272,66 @@ export default function App() {
     }
     setPhoneError(false);
     setStatusMessage('');
-    setCartOpened(false);
     setCheckoutOpened(true);
   };
-  const closeCheckout = () => {
-  setCheckoutOpened(false);
-};
+  const closeCheckout = () => setCheckoutOpened(false);
+
+  useEffect(() => {
+  if (!window.WebApp) return;
+
+  const info = getMaxUserInfo();
+
+  setUserInfo(info);
+
+  if (!phone && info.phone) {
+    setPhone(info.phone);
+  }
+
+  if (window.WebApp.platform) {
+    setPlatform(window.WebApp.platform);
+  }
+
+  if (window.WebApp.getLaunchContext) {
+    window.WebApp
+      .getLaunchContext()
+      .then(ctx => setLaunchContext(ctx.entryPoint ?? 'default'))
+      .catch(() => setLaunchContext('default'));
+  }
+}, []);
 
 useEffect(() => {
-  if (typeof window !== 'undefined' && window.WebApp) {
+  if (!window.WebApp?.BackButton) return;
 
-    const info = getMaxUserInfo();
-    setUserInfo(info);
-
-    if (!phone && info.phone) {
-      setPhone(info.phone);
+  const backHandler = () => {
+    if (checkoutOpened) {
+      setCheckoutOpened(false);
+      return;
     }
 
-    if (window.WebApp?.platform) {
-      setPlatform(window.WebApp.platform);
+    if (cartOpened) {
+      setCartOpened(false);
+      return;
     }
 
-    if (window.WebApp?.getLaunchContext) {
-      window.WebApp.getLaunchContext().then(context => {
-        setLaunchContext(context.entryPoint ?? 'default');
-      }).catch(() => {
-        setLaunchContext('default');
-      });
+    window.WebApp.close?.();
+  };
+
+  if (checkoutOpened || cartOpened) {
+    window.WebApp.BackButton.show?.();
+  } else {
+    window.WebApp.BackButton.hide?.();
+  }
+
+  if (window.WebApp.BackButton.onClick) {
+    window.WebApp.BackButton.onClick(backHandler);
+  }
+
+  return () => {
+    if (window.WebApp.BackButton.offClick) {
+      window.WebApp.BackButton.offClick(backHandler);
     }
-
-
-    // 👇 НОВЫЙ BACK BUTTON MAX
-
-    const backButton = window.WebApp.BackButton;
-
-    if (backButton?.show) {
-      backButton.show();
-    }
-
-    const backHandler = () => {
-      if (checkoutOpened) {
-        setCheckoutOpened(false);
-        return;
-      }
-
-      if (cartOpened) {
-        setCartOpened(false);
-        return;
-      }
-
-      if (window.WebApp?.close) {
-        window.WebApp.close();
-      }
-    };
-
-    if (backButton?.onClick) {
-      backButton.onClick(backHandler);
-    }
-      try {
-        if (!phone && privacyAccepted && typeof window !== 'undefined') {
-          const alreadyRequested = localStorage.getItem('maxPhoneRequested') === 'true';
-          const contactMethod = getMaxContactRequestMethod ? getMaxContactRequestMethod() : null;
-          if (contactMethod && !alreadyRequested) {
-            localStorage.setItem('maxPhoneRequested', 'true');
-            // вызов асинхронно, чтобы не блокировать эффект
-            Promise.resolve().then(() => requestContactFromMax());
-          }
-        }
-      } catch (e) {
-        console.debug('Auto-request phone skipped:', e);
-      }
-    }
-}, [phone, cartOpened, checkoutOpened]);
+  };
+}, [cartOpened, checkoutOpened]);
 
   const getMaxContactRequestMethod = () => {
     if (typeof window === 'undefined' || !window.WebApp) {

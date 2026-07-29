@@ -5,9 +5,6 @@ import { fileURLToPath } from "url";
 
 dotenv.config();
 
-// Только для тестов! Удалить после настройки сертификата Минцифры.
-// process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 

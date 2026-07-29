@@ -76,7 +76,7 @@ function getMaxUserInfo() {
 
 function buildOrderMessage(order, userInfo) {
   const lines = [
-    `Новый заказ от ${userInfo.fullName} (${userInfo.username || 'без username'})`,
+    `Новый заказ от ${userInfo.fullName}`,
     `Телефон: ${order.phone}`,
     `Адрес: ${order.address}`,
     `Дата: ${order.date}`,

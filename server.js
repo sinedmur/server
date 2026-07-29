@@ -1,6 +1,5 @@
 import express from "express";
 import dotenv from "dotenv";
-import https from "https";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -16,70 +15,17 @@ const ACCESS_TOKEN = process.env.BOT_TOKEN?.trim();
 const DEFAULT_CHAT_ID = process.env.VITE_MANAGER_CHAT_ID?.trim();
 
 if (!ACCESS_TOKEN) {
-    console.error("❌ BOT_TOKEN не найден");
+    console.error("❌ BOT_TOKEN is missing");
     process.exit(1);
 }
 
 if (!DEFAULT_CHAT_ID) {
-    console.error("❌ VITE_MANAGER_CHAT_ID не найден");
+    console.error("❌ VITE_MANAGER_CHAT_ID is missing");
     process.exit(1);
 }
 
 app.use(express.json());
-
 app.use(express.static(path.join(__dirname, "dist")));
-
-function sendMessage(chatId, text) {
-    return new Promise((resolve, reject) => {
-        const body = JSON.stringify({
-            chat_id: chatId,
-            text
-        });
-
-        const req = https.request(
-            "https://platform-api2.max.ru/messages",
-            {
-                method: "POST",
-                headers: {
-                    "Authorization": ACCESS_TOKEN,
-                    "Content-Type": "application/json",
-                    "Content-Length": Buffer.byteLength(body)
-                }
-            },
-            (res) => {
-                let data = "";
-
-                res.on("data", chunk => {
-                    data += chunk;
-                });
-
-                res.on("end", () => {
-                    let json = {};
-
-                    try {
-                        json = data ? JSON.parse(data) : {};
-                    } catch {
-                        json = { raw: data };
-                    }
-
-                    if (res.statusCode >= 200 && res.statusCode < 300) {
-                        resolve(json);
-                    } else {
-                        reject({
-                            status: res.statusCode,
-                            response: json
-                        });
-                    }
-                });
-            }
-        );
-
-        req.on("error", reject);
-
-        req.write(body);
-        req.end();
-    });
-}
 
 app.post("/order", async (req, res) => {
     try {
@@ -88,31 +34,51 @@ app.post("/order", async (req, res) => {
         if (!text) {
             return res.status(400).json({
                 success: false,
-                error: "Поле text обязательно"
+                error: "Text is required"
             });
         }
 
-        const result = await sendMessage(
-            chat_id || DEFAULT_CHAT_ID,
-            text
+        const response = await fetch(
+            "https://platform-api2.max.ru/messages",
+            {
+                method: "POST",
+                headers: {
+                    "Authorization": ACCESS_TOKEN,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    chat_id: chat_id || DEFAULT_CHAT_ID,
+                    text
+                })
+            }
         );
 
-        console.log("✅ Message sent:", result);
+        const data = await response.json();
+
+        if (!response.ok) {
+            console.error("MAX API ERROR:", data);
+
+            return res.status(response.status).json({
+                success: false,
+                status: response.status,
+                error: data
+            });
+        }
+
+        console.log("✅ Message sent:", data);
 
         res.json({
             success: true,
-            data: result
+            data
         });
 
     } catch (err) {
 
-        console.error("MAX API ERROR");
+        console.error("SERVER ERROR:", err);
 
-        console.error(err);
-
-        res.status(err.status || 500).json({
+        res.status(500).json({
             success: false,
-            error: err.response || err.message || err
+            error: err.message
         });
 
     }
@@ -123,5 +89,5 @@ app.get("*", (_, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`🚀 Server started on port ${PORT}`);
+    console.log(`🚀 Server started on ${PORT}`);
 });

@@ -40,20 +40,41 @@ app.post('/order', async (req, res) => {
       ? botToken.trim()
       : `Bearer ${botToken.trim()}`;
 
-    const response = await fetch('https://platform-api2.max.ru/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: authToken
-      },
-      body: JSON.stringify({ chat_id: targetChatId, text }),
-      agent: httpsAgent
-    });
+    const requestBody = JSON.stringify({ chat_id: targetChatId, text });
 
-    const body = await response.json();
-    if (!response.ok) {
-      return res.status(response.status).json(body);
-    }
+    const body = await new Promise((resolve, reject) => {
+      const request = https.request('https://platform-api2.max.ru/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(requestBody),
+          Authorization: authToken
+        },
+        agent: httpsAgent
+      }, response => {
+        let data = '';
+        response.on('data', chunk => { data += chunk; });
+        response.on('end', () => {
+          try {
+            const parsed = data ? JSON.parse(data) : {};
+            if (response.statusCode >= 200 && response.statusCode < 300) {
+              resolve(parsed);
+            } else {
+              const error = new Error('MAX API request failed');
+              error.status = response.statusCode;
+              error.body = parsed;
+              reject(error);
+            }
+          } catch (parseError) {
+            reject(parseError);
+          }
+        });
+      });
+
+      request.on('error', reject);
+      request.write(requestBody);
+      request.end();
+    });
 
     return res.status(200).json(body);
   } catch (error) {

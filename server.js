@@ -134,6 +134,18 @@ app.get("/chats", async (req, res) => {
     res.json(data);
 });
 
+app.get("/me", async (req, res) => {
+    const response = await fetch("https://platform-api2.max.ru/me", {
+        headers: {
+            Authorization: ACCESS_TOKEN
+        }
+    });
+
+    const data = await response.json();
+
+    res.json(data);
+});
+
 app.get("*", (req, res) => {
     res.sendFile(path.join(__dirname, "dist", "index.html"));
 });

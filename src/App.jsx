@@ -262,7 +262,10 @@ export default function App() {
     );
   }, [cart]);
 
-  const openCart = () => setCartOpened(true);
+  const openCart = () => {
+  setCheckoutOpened(false);
+  setCartOpened(true);
+  };
   const closeCart = () => setCartOpened(false);
   const openCheckout = () => {
     if (cart.length === 0) {

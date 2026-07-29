@@ -36,9 +36,10 @@ app.post('/order', async (req, res) => {
       return res.status(400).json({ error: 'Invalid payload: chat_id and text are required.' });
     }
 
-    const authToken = botToken.trim().startsWith('Bearer ')
-      ? botToken.trim()
-      : `Bearer ${botToken.trim()}`;
+    const rawToken = botToken.trim().replace(/^['"](.+)['"]$/, '$1');
+    const authToken = rawToken.match(/^Bearer\s+/i)
+      ? rawToken
+      : `Bearer ${rawToken}`;
 
     const requestBody = JSON.stringify({ chat_id: targetChatId, text });
 

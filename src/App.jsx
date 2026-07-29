@@ -277,40 +277,56 @@ export default function App() {
   };
   const closeCheckout = () => setCheckoutOpened(false);
 
-  useEffect(() => {
-    if (typeof window !== 'undefined' && window.WebApp) {
-      const info = getMaxUserInfo();
-      setUserInfo(info);
-      if (!phone && info.phone) {
-        setPhone(info.phone);
-      }
-      if (window.WebApp?.platform) {
-        setPlatform(window.WebApp.platform);
-      }
-      if (window.WebApp?.getLaunchContext) {
-        window.WebApp.getLaunchContext().then(context => {
-          setLaunchContext(context.entryPoint ?? 'default');
-        }).catch(() => {
-          setLaunchContext('default');
-        });
-      }
-      if (window.WebApp?.BackButton?.show) {
-        window.WebApp.BackButton.show();
-      }
-      const backHandler = () => {
-        closeCheckout();
-        closeCart();
-      };
-      if (window.WebApp?.BackButton) {
-        if (typeof window.WebApp.BackButton.onClick === 'function') {
-          window.WebApp.BackButton.onClick(backHandler);
-        } else if (typeof window.WebApp.BackButton.click === 'function') {
-          window.WebApp.BackButton.click(backHandler);
-        }
+useEffect(() => {
+  if (typeof window !== 'undefined' && window.WebApp) {
+
+    const info = getMaxUserInfo();
+    setUserInfo(info);
+
+    if (!phone && info.phone) {
+      setPhone(info.phone);
+    }
+
+    if (window.WebApp?.platform) {
+      setPlatform(window.WebApp.platform);
+    }
+
+    if (window.WebApp?.getLaunchContext) {
+      window.WebApp.getLaunchContext().then(context => {
+        setLaunchContext(context.entryPoint ?? 'default');
+      }).catch(() => {
+        setLaunchContext('default');
+      });
+    }
+
+
+    // 👇 НОВЫЙ BACK BUTTON MAX
+
+    const backButton = window.WebApp.BackButton;
+
+    if (backButton?.show) {
+      backButton.show();
+    }
+
+    const backHandler = () => {
+      if (checkoutOpened) {
+        setCheckoutOpened(false);
+        return;
       }
 
-      // Автоподтяг номера из MAX: только если у нас нет номера, пользователь принял privacy
-      // и мы ещё не делали такой запрос (чтобы не надоедать запросами).
+      if (cartOpened) {
+        setCartOpened(false);
+        return;
+      }
+
+      if (window.WebApp?.close) {
+        window.WebApp.close();
+      }
+    };
+
+    if (backButton?.onClick) {
+      backButton.onClick(backHandler);
+    }
       try {
         if (!phone && privacyAccepted && typeof window !== 'undefined') {
           const alreadyRequested = localStorage.getItem('maxPhoneRequested') === 'true';
@@ -325,7 +341,7 @@ export default function App() {
         console.debug('Auto-request phone skipped:', e);
       }
     }
-  }, [phone]);
+}, [phone, cartOpened, checkoutOpened]);
 
   const getMaxContactRequestMethod = () => {
     if (typeof window === 'undefined' || !window.WebApp) {

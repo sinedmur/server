@@ -120,14 +120,6 @@ app.post("/order", async (req, res) => {
 
 });
 
-app.get("*", (req, res) => {
-    res.sendFile(path.join(__dirname, "dist", "index.html"));
-});
-
-app.listen(PORT, () => {
-    console.log(`🚀 Server started on ${PORT}`);
-});
-
 app.get("/chats", async (req, res) => {
     const response = await fetch("https://platform-api2.max.ru/chats", {
         headers: {
@@ -141,3 +133,12 @@ app.get("/chats", async (req, res) => {
 
     res.json(data);
 });
+
+app.get("*", (req, res) => {
+    res.sendFile(path.join(__dirname, "dist", "index.html"));
+});
+
+app.listen(PORT, () => {
+    console.log(`🚀 Server started on ${PORT}`);
+});
+

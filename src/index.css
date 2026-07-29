@@ -246,7 +246,9 @@ input {
 
 @media (max-width: 340px) {
   .menu-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    padding: 10px;
   }
 }
 
@@ -612,8 +614,4 @@ select,
   display: none;
 }
 
-@media (max-width: 480px) {
-  .menu-grid {
-    grid-template-columns: 1fr;
-  }
-}
+

@@ -1,103 +1,127 @@
-import express from 'express';
-import dotenv from 'dotenv';
-import https from 'https';
+import express from "express";
+import dotenv from "dotenv";
+import https from "https";
+import path from "path";
+import { fileURLToPath } from "url";
 
 dotenv.config();
-dotenv.config({ path: '.env.local' });
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
-const port = process.env.PORT || 3000;
-const botToken = process.env.BOT_TOKEN;
-const managerChatId = process.env.VITE_MANAGER_CHAT_ID;
-const disableTls = process.env.DISABLE_TLS === 'true' || process.env.NODE_TLS_REJECT_UNAUTHORIZED === '0';
-const httpsAgent = new https.Agent({ rejectUnauthorized: !disableTls });
+const PORT = process.env.PORT || 8080;
 
-if (disableTls) {
-  console.warn('WARNING: TLS certificate verification is disabled for outgoing requests.');
+const ACCESS_TOKEN = process.env.BOT_TOKEN?.trim();
+const DEFAULT_CHAT_ID = process.env.VITE_MANAGER_CHAT_ID?.trim();
+
+if (!ACCESS_TOKEN) {
+    console.error("❌ BOT_TOKEN не найден");
+    process.exit(1);
 }
 
-if (!botToken) {
-  console.error('BOT_TOKEN is not configured in server environment.');
-  process.exit(1);
-}
-if (!managerChatId) {
-  console.error('VITE_MANAGER_CHAT_ID is not configured in server environment.');
-  process.exit(1);
+if (!DEFAULT_CHAT_ID) {
+    console.error("❌ VITE_MANAGER_CHAT_ID не найден");
+    process.exit(1);
 }
 
 app.use(express.json());
-app.use(express.static('dist'));
 
-app.post('/order', async (req, res) => {
-  try {
-    const { chat_id, text } = req.body;
-    const targetChatId = chat_id || managerChatId;
-    if (!targetChatId || !text) {
-      return res.status(400).json({ error: 'Invalid payload: chat_id and text are required.' });
-    }
+app.use(express.static(path.join(__dirname, "dist")));
 
-    const rawToken = botToken.trim()
-      .replace(/^['"](.+)['"]$/, '$1')
-      .replace(/^<(.+)>$/, '$1')
-      .replace(/\r?\n/g, '');
-    const authToken = rawToken.match(/^Bearer\s+/i)
-      ? rawToken
-      : `Bearer ${rawToken}`;
-
-    console.log('BOT_TOKEN debug:', {
-      rawLength: rawToken.length,
-      startsWithBearer: /^Bearer\s+/i.test(rawToken),
-      authHeader: authToken.length > 10 ? `Bearer ${authToken.slice(-10)}` : authToken,
-      mask: rawToken.length > 10 ? `${rawToken.slice(0, 6)}...${rawToken.slice(-6)}` : rawToken
-    });
-
-    const requestBody = JSON.stringify({ chat_id: targetChatId, text });
-
-    const body = await new Promise((resolve, reject) => {
-      const request = https.request('https://platform-api2.max.ru/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Content-Length': Buffer.byteLength(requestBody),
-          Authorization: authToken
-        },
-        agent: httpsAgent
-      }, response => {
-        let data = '';
-        response.on('data', chunk => { data += chunk; });
-        response.on('end', () => {
-          try {
-            const parsed = data ? JSON.parse(data) : {};
-            if (response.statusCode >= 200 && response.statusCode < 300) {
-              resolve(parsed);
-            } else {
-              const error = new Error('MAX API request failed');
-              error.status = response.statusCode;
-              error.body = parsed;
-              reject(error);
-            }
-          } catch (parseError) {
-            reject(parseError);
-          }
+function sendMessage(chatId, text) {
+    return new Promise((resolve, reject) => {
+        const body = JSON.stringify({
+            chat_id: chatId,
+            text
         });
-      });
 
-      request.on('error', reject);
-      request.write(requestBody);
-      request.end();
+        const req = https.request(
+            "https://platform-api2.max.ru/messages",
+            {
+                method: "POST",
+                headers: {
+                    "Authorization": ACCESS_TOKEN,
+                    "Content-Type": "application/json",
+                    "Content-Length": Buffer.byteLength(body)
+                }
+            },
+            (res) => {
+                let data = "";
+
+                res.on("data", chunk => {
+                    data += chunk;
+                });
+
+                res.on("end", () => {
+                    let json = {};
+
+                    try {
+                        json = data ? JSON.parse(data) : {};
+                    } catch {
+                        json = { raw: data };
+                    }
+
+                    if (res.statusCode >= 200 && res.statusCode < 300) {
+                        resolve(json);
+                    } else {
+                        reject({
+                            status: res.statusCode,
+                            response: json
+                        });
+                    }
+                });
+            }
+        );
+
+        req.on("error", reject);
+
+        req.write(body);
+        req.end();
     });
+}
 
-    return res.status(200).json(body);
-  } catch (error) {
-    console.error('Order proxy error:', error);
-    return res.status(500).json({ error: 'Order proxy failed', details: error.message });
-  }
+app.post("/order", async (req, res) => {
+    try {
+        const { chat_id, text } = req.body;
+
+        if (!text) {
+            return res.status(400).json({
+                success: false,
+                error: "Поле text обязательно"
+            });
+        }
+
+        const result = await sendMessage(
+            chat_id || DEFAULT_CHAT_ID,
+            text
+        );
+
+        console.log("✅ Message sent:", result);
+
+        res.json({
+            success: true,
+            data: result
+        });
+
+    } catch (err) {
+
+        console.error("MAX API ERROR");
+
+        console.error(err);
+
+        res.status(err.status || 500).json({
+            success: false,
+            error: err.response || err.message || err
+        });
+
+    }
 });
 
-app.get('*', (req, res) => {
-  res.sendFile('index.html', { root: 'dist' });
+app.get("*", (_, res) => {
+    res.sendFile(path.join(__dirname, "dist", "index.html"));
 });
 
-app.listen(port, () => {
-  console.log(`Order proxy server running on http://localhost:${port}`);
+app.listen(PORT, () => {
+    console.log(`🚀 Server started on port ${PORT}`);
 });

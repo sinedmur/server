@@ -47,6 +47,7 @@ app.post('/order', async (req, res) => {
     console.log('BOT_TOKEN debug:', {
       rawLength: rawToken.length,
       startsWithBearer: /^Bearer\s+/i.test(rawToken),
+      authHeader: authToken.length > 10 ? `Bearer ${authToken.slice(-10)}` : authToken,
       mask: rawToken.length > 10 ? `${rawToken.slice(0, 6)}...${rawToken.slice(-6)}` : rawToken
     });
 

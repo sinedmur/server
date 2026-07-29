@@ -127,3 +127,17 @@ app.get("*", (req, res) => {
 app.listen(PORT, () => {
     console.log(`🚀 Server started on ${PORT}`);
 });
+
+app.get("/chats", async (req, res) => {
+    const response = await fetch("https://platform-api2.max.ru/chats", {
+        headers: {
+            Authorization: ACCESS_TOKEN
+        }
+    });
+
+    const data = await response.json();
+
+    console.log(data);
+
+    res.json(data);
+});

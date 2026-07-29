@@ -16,7 +16,7 @@ const app = express();
 const PORT = process.env.PORT || 8080;
 
 const ACCESS_TOKEN = process.env.BOT_TOKEN?.trim();
-const DEFAULT_CHAT_ID = process.env.VITE_MANAGER_CHAT_ID?.trim();
+const DEFAULT_CHAT_ID = Number(process.env.VITE_MANAGER_CHAT_ID);
 
 if (!ACCESS_TOKEN) {
     console.error("❌ BOT_TOKEN not found");
@@ -34,8 +34,8 @@ app.use(express.static(path.join(__dirname, "dist")));
 async function sendMaxMessage(chatId, text) {
 
     const body = {
-        chat_id: chatId,
-        text: text
+        chat_id: Number(chatId),
+        text
     };
 
     console.log("========== REQUEST ==========");
@@ -118,32 +118,6 @@ app.post("/order", async (req, res) => {
 
     }
 
-});
-
-app.get("/chats", async (req, res) => {
-    const response = await fetch("https://platform-api2.max.ru/chats", {
-        headers: {
-            Authorization: ACCESS_TOKEN
-        }
-    });
-
-    const data = await response.json();
-
-    console.log(data);
-
-    res.json(data);
-});
-
-app.get("/me", async (req, res) => {
-    const response = await fetch("https://platform-api2.max.ru/me", {
-        headers: {
-            Authorization: ACCESS_TOKEN
-        }
-    });
-
-    const data = await response.json();
-
-    res.json(data);
 });
 
 app.get("*", (req, res) => {

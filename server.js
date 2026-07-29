@@ -5,86 +5,122 @@ import { fileURLToPath } from "url";
 
 dotenv.config();
 
+// Только для тестов! Удалить после настройки сертификата Минцифры.
+// process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+
 const PORT = process.env.PORT || 8080;
 
 const ACCESS_TOKEN = process.env.BOT_TOKEN?.trim();
 const DEFAULT_CHAT_ID = process.env.VITE_MANAGER_CHAT_ID?.trim();
 
 if (!ACCESS_TOKEN) {
-    console.error("❌ BOT_TOKEN is missing");
+    console.error("❌ BOT_TOKEN not found");
     process.exit(1);
 }
 
 if (!DEFAULT_CHAT_ID) {
-    console.error("❌ VITE_MANAGER_CHAT_ID is missing");
+    console.error("❌ VITE_MANAGER_CHAT_ID not found");
     process.exit(1);
 }
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "dist")));
 
-app.post("/order", async (req, res) => {
-    try {
-        const { chat_id, text } = req.body;
+async function sendMaxMessage(chatId, text) {
 
+    const body = {
+        chat_id: chatId,
+        text: text
+    };
+
+    console.log("========== REQUEST ==========");
+    console.log("URL:", "https://platform-api2.max.ru/messages");
+    console.log("CHAT:", chatId);
+    console.log("BODY:", body);
+
+    const response = await fetch(
+        "https://platform-api2.max.ru/messages",
+        {
+            method: "POST",
+            headers: {
+                "Authorization": ACCESS_TOKEN,
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
+            body: JSON.stringify(body)
+        }
+    );
+
+    const raw = await response.text();
+
+    let data;
+
+    try {
+        data = JSON.parse(raw);
+    } catch {
+        data = raw;
+    }
+
+    console.log("========== RESPONSE ==========");
+    console.log("STATUS:", response.status);
+    console.log(data);
+
+    if (!response.ok) {
+        throw {
+            status: response.status,
+            body: data
+        };
+    }
+
+    return data;
+}
+
+app.post("/order", async (req, res) => {
+
+    try {
+
+        const chatId = req.body.chat_id || DEFAULT_CHAT_ID;
+        const text = req.body.text;
+            console.log("========== ORDER ==========");
+            console.log({
+                chatId,
+                text,
+                envChatId: DEFAULT_CHAT_ID
+            });
         if (!text) {
             return res.status(400).json({
                 success: false,
-                error: "Text is required"
+                error: "Field 'text' is required"
             });
         }
 
-        const response = await fetch(
-            "https://platform-api2.max.ru/messages",
-            {
-                method: "POST",
-                headers: {
-                    "Authorization": ACCESS_TOKEN,
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    chat_id: chat_id || DEFAULT_CHAT_ID,
-                    text
-                })
-            }
-        );
+        const result = await sendMaxMessage(chatId, text);
 
-        const data = await response.json();
-
-        if (!response.ok) {
-            console.error("MAX API ERROR:", data);
-
-            return res.status(response.status).json({
-                success: false,
-                status: response.status,
-                error: data
-            });
-        }
-
-        console.log("✅ Message sent:", data);
-
-        res.json({
+        return res.json({
             success: true,
-            data
+            result
         });
 
     } catch (err) {
 
-        console.error("SERVER ERROR:", err);
+        console.error("========== MAX ERROR ==========");
+        console.error(err);
 
-        res.status(500).json({
+        return res.status(err.status || 500).json({
             success: false,
-            error: err.message
+            error: err.body || err.message || err
         });
 
     }
+
 });
 
-app.get("*", (_, res) => {
+app.get("*", (req, res) => {
     res.sendFile(path.join(__dirname, "dist", "index.html"));
 });
 

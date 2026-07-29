@@ -266,7 +266,9 @@ export default function App() {
   setCheckoutOpened(false);
   setCartOpened(true);
   };
-  const closeCart = () => setCartOpened(false);
+  const closeCart = () => {
+  setCartOpened(false);
+};
   const openCheckout = () => {
     if (cart.length === 0) {
       setStatusMessage('Добавьте блюда в корзину, чтобы оформить заказ.');
@@ -278,7 +280,9 @@ export default function App() {
     setCartOpened(false);
     setCheckoutOpened(true);
   };
-  const closeCheckout = () => setCheckoutOpened(false);
+  const closeCheckout = () => {
+  setCheckoutOpened(false);
+};
 
 useEffect(() => {
   if (typeof window !== 'undefined' && window.WebApp) {

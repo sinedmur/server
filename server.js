@@ -33,18 +33,8 @@ app.use(express.static(path.join(__dirname, "dist")));
 
 async function sendMaxMessage(chatId, text) {
 
-    const body = {
-        chat_id: Number(chatId),
-        text
-    };
-
-    console.log("========== REQUEST ==========");
-    console.log("URL:", "https://platform-api2.max.ru/messages");
-    console.log("CHAT:", chatId);
-    console.log("BODY:", body);
-
     const response = await fetch(
-        "https://platform-api2.max.ru/messages",
+        `https://platform-api2.max.ru/messages?chat_id=${chatId}`,
         {
             method: "POST",
             headers: {
@@ -52,32 +42,24 @@ async function sendMaxMessage(chatId, text) {
                 "Content-Type": "application/json",
                 "Accept": "application/json"
             },
-            body: JSON.stringify(body)
+            body: JSON.stringify({
+                text
+            })
         }
     );
 
     const raw = await response.text();
 
-    let data;
-
-    try {
-        data = JSON.parse(raw);
-    } catch {
-        data = raw;
-    }
-
-    console.log("========== RESPONSE ==========");
-    console.log("STATUS:", response.status);
-    console.log(data);
+    console.log(raw);
 
     if (!response.ok) {
         throw {
             status: response.status,
-            body: data
+            body: raw
         };
     }
 
-    return data;
+    return JSON.parse(raw);
 }
 
 app.post("/order", async (req, res) => {

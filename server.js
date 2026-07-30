@@ -59,6 +59,37 @@ async function sendMaxMessage(chatId, text) {
     return JSON.parse(raw);
 }
 
+import { YooCheckout } from "yoo-checkout";
+
+const checkout = new YooCheckout({
+    shopId: process.env.YOOKASSA_SHOP_ID,
+    secretKey: process.env.YOOKASSA_SECRET_KEY
+});
+
+app.post("/create-payment", async (req, res) => {
+
+    const { amount } = req.body;
+
+    const payment = await checkout.createPayment({
+        amount: {
+            value: amount.toFixed(2),
+            currency: "RUB"
+        },
+        confirmation: {
+            type: "redirect",
+            return_url: "https://ваш-сайт.ru/payment-success"
+        },
+        capture: true,
+        description: "Заказ столовой"
+    });
+
+    res.json({
+        id: payment.id,
+        url: payment.confirmation.confirmation_url
+    });
+
+});
+
 app.post("/order", async (req, res) => {
 
     try {

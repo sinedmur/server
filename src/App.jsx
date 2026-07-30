@@ -437,7 +437,19 @@ useEffect(() => {
     setOrderStatus('Отправка заказа...');
 
     try {
-      await sendOrderToManager(orderDetails);
+      const response = await fetch("/create-payment", {
+    method: "POST",
+    headers: {
+        "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+        amount: cartTotals.price
+    })
+});
+
+const payment = await response.json();
+
+window.location.href = payment.url;
       setCart([]);
       setOrderStatus('✅ Заказ отправлен менеджеру.');
       if (window.WebApp?.HapticFeedback?.notificationOccurred) {

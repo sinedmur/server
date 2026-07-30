@@ -444,12 +444,7 @@ useEffect(() => {
     },
     body: JSON.stringify({
         amount: cartTotals.price,
-        order: {
-            text,
-            cart,
-            address,
-            phone
-        }
+        order: orderDetails
     })
 });
 

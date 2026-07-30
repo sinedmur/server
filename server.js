@@ -94,41 +94,70 @@ app.post("/create-payment", async (req, res) => {
 });
 
 app.post("/payment-webhook", async (req, res) => {
-
     try {
+        console.log("========== PAYMENT WEBHOOK ==========");
+        console.log(JSON.stringify(req.body, null, 2));
 
         const payment = req.body.object;
 
+        if (!payment) {
+            console.log("Нет объекта payment");
+            return res.sendStatus(400);
+        }
+
         if (payment.status !== "succeeded") {
+            console.log("Платеж еще не успешен:", payment.status);
             return res.sendStatus(200);
         }
 
         const order = pendingOrders.get(payment.id);
 
         if (!order) {
-            console.log("Заказ не найден");
+            console.log("Заказ не найден:", payment.id);
             return res.sendStatus(200);
         }
 
-        await sendMaxMessage(
+        const text = [
+            "🍽 Новый заказ",
+            "",
+            `📞 Телефон: ${order.phone}`,
+            `📍 Адрес: ${order.address}`,
+            `🕒 Дата: ${order.date}`,
+            "",
+            "📋 Состав заказа:",
+            ...order.items.map(item =>
+                `• ${item.name} ×${item.quantity} = ${item.price * item.quantity} ₽`
+            ),
+            "",
+            `💰 Итого: ${order.total} ₽`,
+            `🔥 Калорий: ${order.kcal}`
+        ].join("\n");
+
+        console.log("========== SEND TO MAX ==========");
+        console.log("CHAT:", DEFAULT_CHAT_ID);
+        console.log("TEXT:");
+        console.log(text);
+
+        const result = await sendMaxMessage(
             DEFAULT_CHAT_ID,
-            order.text
+            text
         );
+
+        console.log("Ответ MAX:");
+        console.log(result);
 
         pendingOrders.delete(payment.id);
 
-        console.log("Заказ отправлен");
+        console.log("✅ Заказ отправлен");
 
         res.sendStatus(200);
 
     } catch (e) {
-
+        console.error("========== WEBHOOK ERROR ==========");
         console.error(e);
 
         res.sendStatus(500);
-
     }
-
 });
 
 app.post("/order", async (req, res) => {

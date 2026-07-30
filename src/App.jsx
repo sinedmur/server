@@ -444,7 +444,8 @@ useEffect(() => {
     },
     body: JSON.stringify({
         amount: cartTotals.price,
-        order: orderDetails
+        order: orderDetails,
+        user: userInfo
     })
 });
 

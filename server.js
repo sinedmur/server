@@ -84,7 +84,10 @@ app.post("/create-payment", async (req, res) => {
         description: "Заказ еды"
     });
 
-    pendingOrders.set(payment.id, order);
+    pendingOrders.set(payment.id, {
+    order,
+    user
+    });
 
     res.json({
         id: payment.id,
@@ -101,61 +104,58 @@ app.post("/payment-webhook", async (req, res) => {
         const payment = req.body.object;
 
         if (!payment) {
-            console.log("Нет объекта payment");
             return res.sendStatus(400);
         }
 
         if (payment.status !== "succeeded") {
-            console.log("Платеж еще не успешен:", payment.status);
             return res.sendStatus(200);
         }
 
-        const order = pendingOrders.get(payment.id);
+        const data = pendingOrders.get(payment.id);
 
-        if (!order) {
+        if (!data) {
             console.log("Заказ не найден:", payment.id);
             return res.sendStatus(200);
         }
 
+        const { order, user } = data;
+
+        const customer =
+            user?.fullName ||
+            user?.username ||
+            `ID ${user?.id ?? "неизвестен"}`;
+
         const text = [
-            `🍽 Новый заказ от \`${userInfo.fullName}\``,
+            "🍽 Новый заказ",
+            "",
+            `👤 От кого: ${customer}`,
+            user?.username ? `🔹 @${user.username}` : "",
             "",
             `📞 Телефон: ${order.phone}`,
             `📍 Адрес: ${order.address}`,
             `🕒 Дата: ${order.date}`,
             "",
             "📋 Состав заказа:",
-            ...order.items.map(item =>
-                `• ${item.name} ×${item.quantity} = ${item.price * item.quantity} ₽`
+            ...order.items.map(
+                item => `• ${item.name} ×${item.quantity} = ${item.price * item.quantity} ₽`
             ),
             "",
             `💰 Итого: ${order.total} ₽`,
             `🔥 Калорий: ${order.kcal}`
-        ].join("\n");
+        ]
+            .filter(Boolean)
+            .join("\n");
 
-        console.log("========== SEND TO MAX ==========");
-        console.log("CHAT:", DEFAULT_CHAT_ID);
-        console.log("TEXT:");
-        console.log(text);
+        const result = await sendMaxMessage(DEFAULT_CHAT_ID, text);
 
-        const result = await sendMaxMessage(
-            DEFAULT_CHAT_ID,
-            text
-        );
-
-        console.log("Ответ MAX:");
         console.log(result);
 
         pendingOrders.delete(payment.id);
 
-        console.log("✅ Заказ отправлен");
-
         res.sendStatus(200);
 
     } catch (e) {
-        console.error("========== WEBHOOK ERROR ==========");
         console.error(e);
-
         res.sendStatus(500);
     }
 });

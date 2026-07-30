@@ -128,7 +128,6 @@ app.post("/payment-webhook", async (req, res) => {
             "🍽 Новый заказ",
             "",
             `👤 От кого: ${customer}`,
-            user?.username ? `🔹 @${user.username}` : "",
             "",
             `📞 Телефон: ${order.phone}`,
             `📍 Адрес: ${order.address}`,

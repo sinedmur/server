@@ -69,7 +69,7 @@ const checkout = new YooCheckout({
 
 app.post("/create-payment", async (req, res) => {
 
-    const { amount, order } = req.body;
+    const { amount, order, user } = req.body;
 
     const payment = await checkout.createPayment({
         amount: {
@@ -85,15 +85,14 @@ app.post("/create-payment", async (req, res) => {
     });
 
     pendingOrders.set(payment.id, {
-    order,
-    user
+        order,
+        user
     });
 
     res.json({
         id: payment.id,
         url: payment.confirmation.confirmation_url
     });
-
 });
 
 app.post("/payment-webhook", async (req, res) => {

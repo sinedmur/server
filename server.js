@@ -67,24 +67,30 @@ const checkout = new YooCheckout({
     secretKey: process.env.YOOKASSA_SECRET_KEY
 });
 
-const payment = await checkout.createPayment({
-            amount: {
-                value: amount.toFixed(2),
-                currency: "RUB"
-            },
-            confirmation: {
-                type: "redirect",
-                return_url: "https://stolovka.up.railway.app/"
-            },
-            capture: true,
-            description: "Заказ еды"
-        });
+app.post("/create-payment", async (req, res) => {
 
-        pendingOrders.set(payment.id, order);
+    const { amount, order } = req.body;
 
-        res.json({
-            id: payment.id,
-            url: payment.confirmation.confirmation_url
+    const payment = await checkout.createPayment({
+        amount: {
+            value: Number(amount).toFixed(2),
+            currency: "RUB"
+        },
+        confirmation: {
+            type: "redirect",
+            return_url: "https://stolovka.up.railway.app/"
+        },
+        capture: true,
+        description: "Заказ еды"
+    });
+
+    pendingOrders.set(payment.id, order);
+
+    res.json({
+        id: payment.id,
+        url: payment.confirmation.confirmation_url
+    });
+
 });
 
 app.post("/payment-webhook", async (req, res) => {

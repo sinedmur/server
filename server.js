@@ -4,6 +4,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 dotenv.config();
+const pendingOrders = new Map();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -66,27 +67,61 @@ const checkout = new YooCheckout({
     secretKey: process.env.YOOKASSA_SECRET_KEY
 });
 
-app.post("/create-payment", async (req, res) => {
+const payment = await checkout.createPayment({
+            amount: {
+                value: amount.toFixed(2),
+                currency: "RUB"
+            },
+            confirmation: {
+                type: "redirect",
+                return_url: "https://stolovka.up.railway.app/"
+            },
+            capture: true,
+            description: "Заказ еды"
+        });
 
-    const { amount } = req.body;
+        pendingOrders.set(payment.id, order);
 
-    const payment = await checkout.createPayment({
-        amount: {
-            value: amount.toFixed(2),
-            currency: "RUB"
-        },
-        confirmation: {
-            type: "redirect",
-            return_url: "https://stolovka.up.railway.app/"
-        },
-        capture: true,
-        description: "Заказ еды"
-    });
+        res.json({
+            id: payment.id,
+            url: payment.confirmation.confirmation_url
+});
 
-    res.json({
-        id: payment.id,
-        url: payment.confirmation.confirmation_url
-    });
+app.post("/payment-webhook", async (req, res) => {
+
+    try {
+
+        const payment = req.body.object;
+
+        if (payment.status !== "succeeded") {
+            return res.sendStatus(200);
+        }
+
+        const order = pendingOrders.get(payment.id);
+
+        if (!order) {
+            console.log("Заказ не найден");
+            return res.sendStatus(200);
+        }
+
+        await sendMaxMessage(
+            DEFAULT_CHAT_ID,
+            order.text
+        );
+
+        pendingOrders.delete(payment.id);
+
+        console.log("Заказ отправлен");
+
+        res.sendStatus(200);
+
+    } catch (e) {
+
+        console.error(e);
+
+        res.sendStatus(500);
+
+    }
 
 });
 

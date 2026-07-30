@@ -443,7 +443,13 @@ useEffect(() => {
         "Content-Type": "application/json"
     },
     body: JSON.stringify({
-        amount: cartTotals.price
+        amount: cartTotals.price,
+        order: {
+            text,
+            cart,
+            address,
+            phone
+        }
     })
 });
 

@@ -77,10 +77,10 @@ app.post("/create-payment", async (req, res) => {
         },
         confirmation: {
             type: "redirect",
-            return_url: "https://ваш-сайт.ru/payment-success"
+            return_url: "https://stolovka.up.railway.app/"
         },
         capture: true,
-        description: "Заказ столовой"
+        description: "Заказ еды"
     });
 
     res.json({

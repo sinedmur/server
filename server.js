@@ -118,7 +118,7 @@ app.post("/payment-webhook", async (req, res) => {
         }
 
         const text = [
-            "🍽 Новый заказ",
+            `🍽 Новый заказ от \`${userInfo.fullName}\``,
             "",
             `📞 Телефон: ${order.phone}`,
             `📍 Адрес: ${order.address}`,
